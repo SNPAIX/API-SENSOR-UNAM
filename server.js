@@ -3,51 +3,57 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+// Escuchar en el puerto 3000 por defecto
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
-
-// Servir archivos estáticos (tu HTML, CSS, imágenes) desde la carpeta actual
 app.use(express.static(__dirname));
 
-// Objeto simulado con datos de prueba (por si quieres probar la API)
 let sensorData = {
-    t: 24.5,
-    p: 1013.2,
-    h: 55.0,
-    H: [
-        { t: 24.0, p: 1013.0, h: 54 },
-        { t: 24.5, p: 1013.2, h: 55 }
-    ],
-    gps: { fix: true, lat: 19.4326, lon: -99.1332, alt: 2240, sats: 8, hora: "12:00:00" },
-    trk: [[19.4326, -99.1332]]
+  t: null, p: null, h: null,
+  H: [],
+  gps: { fix: false, lat: null, lon: null, alt: null, sats: 0, hora: null },
+  trk: []
 };
 
-// --- ENDPOINTS DE LA API ---
-
-// 1. Obtener datos
-app.get('/api/sensores', (req, res) => {
-    res.json(sensorData);
-});
-
-// 2. Recibir datos externos (por si en el futuro quieres mandarlos por POST)
+// Endpoint para recibir datos del ESP32
 app.post('/api/sensores', (req, res) => {
-    const nuevoDato = req.body;
-    // Aquí podrías actualizar sensorData con lo que te manden
-    res.json({ success: true, message: 'Datos recibidos correctamente' });
+  const data = req.body;
+  if (data) {
+    sensorData.t = data.t;
+    sensorData.p = data.p;
+    sensorData.h = data.h;
+    
+    sensorData.H.push({ t: data.t, p: data.p, h: data.h });
+    if (sensorData.H.length > 120) sensorData.H.shift();
+
+    if (data.gps) {
+      sensorData.gps = data.gps;
+      if (data.gps.fix && data.gps.lat && data.gps.lon) {
+        sensorData.trk.push([data.gps.lat, data.gps.lon]);
+      }
+    }
+    console.log("Datos recibidos:", data);
+    res.status(200).json({ message: 'Datos guardados' });
+  } else {
+    res.status(400).json({ error: 'Datos no válidos' });
+  }
 });
 
-// 3. Limpiar registros
+// Endpoint para entregar datos al Panel
+app.get('/api/sensores', (req, res) => {
+  res.json(sensorData);
+});
+
+// Endpoint para limpiar historial
 app.post('/api/limpiar', (req, res) => {
-    sensorData.t = null;
-    sensorData.p = null;
-    sensorData.h = null;
-    sensorData.H = [];
-    sensorData.trk = [];
-    sensorData.gps = { fix: false, lat: null, lon: null, alt: null, sats: 0, hora: null };
-    res.json({ success: true, message: 'Datos reiniciados' });
+  sensorData.H = [];
+  sensorData.trk = [];
+  res.status(200).json({ message: 'Historial limpiado' });
 });
 
-const PORT = process.env.PORT || 8080;
+// El servidor escucha en TODAS las interfaces (0.0.0.0) para recibir tráfico externo
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor visible en la red local en: http://192.168.100.22:${PORT}`);
+  console.log(`Servidor de la UNAM en línea: http://132.248.26.212:${PORT}`);
 });
