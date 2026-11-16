@@ -3,7 +3,7 @@
 #include <Adafruit_BME280.h>
 #include <TinyGPS++.h>
 #include <WiFi.h>
-#include <HTTPClient.h> // NUEVO: Librería para peticiones web
+#include <HTTPClient.h>
 #include "time.h"
 
 // Handles de las tareas
@@ -37,7 +37,7 @@ typedef struct {
     uint8_t OrigenId;    
     union {
         PaqueteSensores_t dataSensores;   
-        PaqueteTiempo_t   dataTiempo;     
+        PaqueteTiempo_t   dataTiempo;    
     } payload;
 } QueueMessage_t;
 
@@ -70,14 +70,14 @@ void Sensores(void *parameter) {
       msg.payload.dataSensores.Velo = 0.0;
     }
 
-    // LECTURA DE SENSORES REALES (Descomentados para la prueba real)
+    // LECTURA DE SENSORES REALES
     msg.payload.dataSensores.Temp = bme.readTemperature();
     msg.payload.dataSensores.Pres = (bme.readPressure() / 100.0F);
     msg.payload.dataSensores.Hume = bme.readHumidity();
 
     xQueueSend(QEmpaquetador, &msg, portMAX_DELAY); 
     
-    // CAMBIO: Frecuencia de 10 segundos
+    // Frecuencia de 10 segundos
     vTaskDelay(pdMS_TO_TICKS(10000)); 
   }
 }
@@ -97,7 +97,7 @@ void TomarHora(void *parameter) {
       xQueueSend(QEmpaquetador, &msg, portMAX_DELAY);
     }
     
-    // CAMBIO: Frecuencia de 10 segundos
+    // Frecuencia de 10 segundos
     vTaskDelay(pdMS_TO_TICKS(10000));
   }
 }
@@ -121,13 +121,12 @@ void Empaquetado(void *parameter){
           BanderaTiempo = 1;
       }
 
-      if ((BanderaTiempo & BanderaSensores) == 1) {                
+      if ((BanderaTiempo & BanderaSensores) == 1) {               
         
-        // CAMBIO: Enviar JSON a la IP de la UNAM por HTTP
+        // Enviar JSON a la IP de la UNAM por HTTP (Puerto 80 estándar)
         if(WiFi.status() == WL_CONNECTED){
           HTTPClient http;
-          // Servidor UNAM IP Fija, Puerto 3000
-          http.begin("http://132.248.26.212:3000/api/sensores"); 
+          http.begin("http://132.248.26.212/api/sensores"); 
           http.addHeader("Content-Type", "application/json");
 
           String jsonPayload = "{";
@@ -184,8 +183,6 @@ void setup() {
   while(!getLocalTime(&timeinfo)){
     delay(500);
   }
-  
-  // ELIMINADO: WiFi.disconnect(true) y WiFi.mode(WIFI_OFF) para mantener la conexión.
 
   QEmpaquetador = xQueueCreate(10, sizeof(QueueMessage_t)); 
 
