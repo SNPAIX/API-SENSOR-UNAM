@@ -3,8 +3,8 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-// Escuchar en el puerto 3000 por defecto
-const PORT = process.env.PORT || 3000;
+// CAMBIO: Usar el puerto 80 autorizado por la UNAM
+const PORT = process.env.PORT || 80;
 
 app.use(cors());
 app.use(express.json());
@@ -53,7 +53,6 @@ app.post('/api/limpiar', (req, res) => {
   res.status(200).json({ message: 'Historial limpiado' });
 });
 
-// El servidor escucha en TODAS las interfaces (0.0.0.0) para recibir tráfico externo
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor de la UNAM en línea: http://132.248.26.212:${PORT}`);
+  console.log(`Servidor de la UNAM en línea en el puerto HTTP estándar: ${PORT}`);
 });
